@@ -13,8 +13,8 @@ const int CHANGE_RATE = 10;
 int COLOR_VECTOR[(sizeof(COLOR_NODES) / sizeof(COLOR_NODES[0])) * (MS / CHANGE_RATE)][3];
 
 /// @brief
-/// @param color 
-/// @return 
+/// @param color
+/// @return
 double colorCast(int color)
 {
     if (color > 255)
@@ -31,9 +31,9 @@ double colorCast(int color)
 
 /// @brief change RGB LED color
 /// @param pin LED pin
-/// @param red 
-/// @param green 
-/// @param blue 
+/// @param red
+/// @param green
+/// @param blue
 void setLEDColor(uint8_t pin, int red, int green, int blue)
 {
     neopixelWrite(pin, colorCast(red), colorCast(green), colorCast(blue));
@@ -96,6 +96,7 @@ void setup()
 // the loop function runs over and over again forever
 void loop()
 {
+#ifdef RGB_BUILTIN
     if (nullptr != COLOR_VECTOR[0])
     {
         for (size_t i = 0; i < sizeof(COLOR_VECTOR) / sizeof(COLOR_VECTOR[0]); i++)
@@ -118,6 +119,5 @@ void loop()
         Serial.println("Color Error");
         delay(5000);
     }
-#ifdef RGB_BUILTIN
 #endif
 }
