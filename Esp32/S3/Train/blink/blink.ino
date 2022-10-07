@@ -1,13 +1,20 @@
-// 0.25098 * n(color max 255)
+// 0.25098 * n(color max 255), from 64 / 255. LED birthness level 64
 const double CAST_RATE = 0.25098;
+// Color change interval(ms)
+const int MS = 2000;
 // color nodes
-const int COLOR_VECTOR[][3] = {
+const int COLOR_NODES[][3] = {
     {255, 0, 0},
     {0, 255, 0},
     {0, 0, 255}};
 // color change rate(ms)
 const int CHANGE_RATE = 10;
+// all colors
+int COLOR_VECTOR[(sizeof(COLOR_NODES) / sizeof(COLOR_NODES[0])) * (MS / CHANGE_RATE)][3];
 
+/// @brief
+/// @param color 
+/// @return 
 double colorCast(int color)
 {
     if (color > 255)
@@ -22,54 +29,95 @@ double colorCast(int color)
     return color * CAST_RATE;
 }
 
+/// @brief change RGB LED color
+/// @param pin LED pin
+/// @param red 
+/// @param green 
+/// @param blue 
 void setLEDColor(uint8_t pin, int red, int green, int blue)
 {
     neopixelWrite(pin, colorCast(red), colorCast(green), colorCast(blue));
 }
 
-double setColorCond(int color, double val) 
+/// @brief color addition or subtraction
+/// @param color difference from next color code
+/// @param freq RGB change frequency
+/// @return
+double setColorCond(int color, int freq)
 {
-    return color < 0 ? abs(val) : -abs(val);
+    double val = abs(color) / ((double)freq);
+
+    return ((double)color) < 0.0 ? -abs(val) : abs(val);
 }
 
 void setup()
 {
-    // No need to initialize the RGB LED
-    Serial.begin(115200);
+    int arrSize = sizeof(COLOR_NODES) / sizeof(COLOR_NODES[0]);
+    int frequency = MS / CHANGE_RATE; // RGB color change frequency
+
+    Serial.begin(115200);           // Com baud rate
     digitalWrite(RGB_BUILTIN, LOW); // Turn the RGB LED off
-    delay(1000);
+
+    for (size_t i = 0; i < arrSize; i++)
+    {
+        const int *color = COLOR_NODES[i];
+        const int *nextColor = nullptr;
+        double swapColor[3] = {color[0] + 0.0, color[1] + 0.0, color[2] + 0.0};
+
+        if ((i + 1) < arrSize)
+        {
+            nextColor = COLOR_NODES[i + 1];
+        }
+        else if ((i + 1) == arrSize)
+        {
+            nextColor = COLOR_NODES[0];
+        }
+
+        if (nullptr != nextColor)
+        {
+            double rGapVal = setColorCond(nextColor[0] - color[0], frequency);
+            double gGapVal = setColorCond(nextColor[1] - color[1], frequency);
+            double bGapVal = setColorCond(nextColor[2] - color[2], frequency);
+
+            for (size_t nextI = i == 0 ? i : i * frequency; nextI < (i + 1) * frequency; nextI++)
+            {
+                swapColor[0] += rGapVal;
+                swapColor[1] += gGapVal;
+                swapColor[2] += bGapVal;
+
+                COLOR_VECTOR[nextI][0] = (int)swapColor[0];
+                COLOR_VECTOR[nextI][1] = (int)swapColor[1];
+                COLOR_VECTOR[nextI][2] = (int)swapColor[2];
+            }
+        }
+    }
 }
 
 // the loop function runs over and over again forever
 void loop()
 {
-#ifdef RGB_BUILTIN
-    int arrSize = sizeof(COLOR_VECTOR) / sizeof(int);
-
-    for (size_t i = 0; i < arrSize; i++)
+    if (nullptr != COLOR_VECTOR[0])
     {
-        const int *color = COLOR_VECTOR[i];
-
-        if ((i + 1) > arrSize - 1) 
+        for (size_t i = 0; i < sizeof(COLOR_VECTOR) / sizeof(COLOR_VECTOR[0]); i++)
         {
-            const int *nextColor = COLOR_VECTOR[i + 1];
-            double swapColor[] = {nextColor[0] - color[0], nextColor[1] - color[1], nextColor[2] - color[2]};
-            int sColorR = abs(swapColor[0]);
-            int sColorG = abs(swapColor[1]);
-            int sColorB = abs(swapColor[2]);
-            // int mColorR = sColorR / 1000;
-            // int mColorG = sColorG / 1000;
-            // int mColorB = sColorB / 1000;
+            const int *color = COLOR_VECTOR[i];
 
-            for (size_t i = 0; i < 1000 / CHANGE_RATE; i++)
+            if (nullptr != color)
             {
-                setLEDColor(RGB_BUILTIN, colorCast(sColorR), colorCast(sColorG), colorCast(sColorB));
+                setLEDColor(RGB_BUILTIN, color[0], color[1], color[2]);
                 delay(CHANGE_RATE);
             }
-            
+            else
+            {
+                Serial.println("An color error");
+            }
         }
-
-        delay(CHANGE_RATE);
     }
+    else
+    {
+        Serial.println("Color Error");
+        delay(5000);
+    }
+#ifdef RGB_BUILTIN
 #endif
 }
