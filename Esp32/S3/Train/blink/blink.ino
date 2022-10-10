@@ -79,7 +79,7 @@ void setup()
             double gGapVal = setColorCond(nextColor[1] - color[1], frequency);
             double bGapVal = setColorCond(nextColor[2] - color[2], frequency);
 
-            for (size_t nextI = i == 0 ? i : i * frequency; nextI < (i + 1) * frequency; nextI++)
+            for (size_t nextI = i * frequency; nextI < (i + 1) * frequency; nextI++)
             {
                 swapColor[0] += rGapVal;
                 swapColor[1] += gGapVal;
